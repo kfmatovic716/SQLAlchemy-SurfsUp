@@ -1,7 +1,4 @@
 # Import everything you used in the starter_climate_analysis.ipynb file, along with Flask modules
-%matplotlib inline
-from matplotlib import style
-style.use('fivethirtyeight')
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -13,7 +10,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import create_engine, func
 import datetime as dt
 
-from flask import Flask
+from flask import Flask, jsonify
 
 
 #################################################
@@ -46,74 +43,133 @@ app = Flask(__name__)
 @app.route("/")
 # define a welcome() function that returns a multiline string message to anyone who visits the route
 def welcome():
-    return  "Welcome to the Climate App! It's so much fun to learn about the Climate, isn't it?"
+    return  (
+        f"Welcome to the Climate API!<br/>"
+        f"<br/>"
+        f"<br/>"
+        f"The following climate-related API's are available in this site:<br/>"
+        f"<br/>"
+        f"> Precipitation<br/>"
+        f"> List of Stations<br/>"
+        f"> Temperature Observations<br/>"
+    )
 
 # Set the app.route() decorator for the "/api/v1.0/precipitation" route
 @app.route("/api/v1.0/precipitation")
+
 # define a precipitation() function that returns jsonified precipitation data from the database
 def precipitation():
-    return 
-# In the function (logic should be the same from the starter_climate_analysis.ipynb notebook):
+
+    session = Session(engine)
+
     # Calculate the date 1 year ago from last date in database
+    prev_year = dt.date(2017,8,23) - dt.timedelta(days=365)
 
     # Query for the date and precipitation for the last year
+    prev_yr_prcp = session.query(Measurement.date, Measurement.prcp).\
+                        filter(Measurement.date>= prev_year).\
+                        order_by(Measurement.date.asc()).all()
+
+    session.close()
 
     # Create a dictionary to store the date: prcp pairs. 
-    # Hint: check out a dictionary comprehension, which is similar to a list comprehension but allows you to create dictionaries
-    
+    prcp_pairs = []
+    for date, prcp in prev_yr_prcp:
+        dict_row = {}
+        dict_row["date"] = date
+        dict_row["prcp"] = prcp
+        prcp_pairs.append(dict_row)
+
     # Return the jsonify() representation of the dictionary
+    return jsonify(prcp_pairs)
+    
     
 # Set the app.route() decorator for the "/api/v1.0/stations" route
 @app.route("/api/v1.0/stations")
+
 # define a stations() function that returns jsonified station data from the database
 def stations():
-    return
-# In the function (logic should be the same from the starter_climate_analysis.ipynb notebook):
+
+    session = Session(engine)
+
     # Query for the list of stations
+    stations_all = session.query(Station.station, Station.name).\
+                           group_by(Station.station).all()
+
+    session.close()
 
     # Unravel results into a 1D array and convert to a list
     # Hint: checkout the np.ravel() function to make it easier to convert to a list
-    
+    list_stations = list(np.ravel(stations_all))
+
     # Return the jsonify() representation of the list
+    return jsonify(list_stations)
 
 
 # Set the app.route() decorator for the "/api/v1.0/tobs" route
 @app.route("/api/v1.0/tobs")
+
 # define a temp_monthly() function that returns jsonified temperature observations (tobs) data from the database
 def temp_monthly():
-    return
-# In the function (logic should be the same from the starter_climate_analysis.ipynb notebook):
+
+    session = Session(engine)
+
     # Calculate the date 1 year ago from last date in database
 
+    prev_year = dt.date(2017, 8, 23) - dt.timedelta(days=365) 
+
     # Query the primary station for all tobs from the last year
-    
+    temperature = session.query(Measurement.date, Measurement.tobs).\
+                            filter(Measurement.date >= prev_year).\
+                            order_by(Measurement.date.asc()).all()
+
+    session.close()
+
     # Unravel results into a 1D array and convert to a list
     # Hint: checkout the np.ravel() function to make it easier to convert to a list
-    
+    temp_list = list(np.ravel(temperature))
+
     # Return the jsonify() representation of the list
+    return jsonify(temp_list)
 
 
-# Set the app.route() decorator for the "/api/v1.0/temp/<start>" route and "/api/v1.0/temp/<start>/<end>" route
-# define a stats() function that takes a start and end argument, and returns jsonified TMIN, TAVG, TMAX data from the database
+# Set the app.route() decorator for the "/api/v1.0/temp/<start>" route
 @app.route("/api/v1.0/temp/<start>")
+
+# Set the app.route() decorator for the"/api/v1.0/temp/<start>/<end>" route
 @app.route("/api/v1.0/temp/<start>/<end>")
+
+# define a stats() function that takes a start and end argument, and returns jsonified TMIN, TAVG, TMAX data from the database
 def stats(start=None, end=None):
-    # If the end argument is None:
+
+    session = Session(engine)
+
+    #calculate min, avg and max if no end date
+    if end == None:
         # calculate TMIN, TAVG, TMAX for dates greater than start
-        
-        # Unravel results into a 1D array and convert to a list
-        # Hint: checkout the np.ravel() function to make it easier to convert to a list
-    
-        # Return the jsonify() representation of the list
+        aggregates = func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)
+        temp_data = session.query(*aggregates).filter(Measurement.date >= start).all()
 
-    # Else:
-        # calculate TMIN, TAVG, TMAX with both start and stop
-        
-        # Unravel results into a 1D array and convert to a list
-        # Hint: checkout the np.ravel() function to make it easier to convert to a list
     
+        # Unravel results into a 1D array and convert to a list
+        temp_data_list = list(np.ravel(temp_data))
         # Return the jsonify() representation of the list
+        return jsonify(temp_data_list)
 
+    else:
+        # calculate TMIN, TAVG, TMAX with both start and end
+        aggregates = func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)
+        temp_data = session.query(*aggregates).\
+                    filter(Measurement.date >= start).\
+                    filter(Measurement.date <= end).all()
+
+        # Unravel results into a 1D array and convert to a list
+        temp_data_list = list(np.ravel(temp_data))
+
+        # Return the jsonify() representation of the list
+        return jsonify(temp_data_list)
+
+    session.close()
 
 if __name__ == '__main__':
     app.run()
