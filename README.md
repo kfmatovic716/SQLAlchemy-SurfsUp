@@ -34,13 +34,13 @@
 
         > /api/v1.0/tobs - queries dates and temperature observations for the most active station and returning list of temperature observation in JSON format
         
-        > /api/v1.0/<start> - given only a start date, the endpoint calculates the minimum, average, and maximum temperature for all dates greater than or equal to the start date and returns in a JSON format
+        > /api/v1.0/<start> - given only a start date, the endpoint calculates the minimum, average, and maximum temperature for all dates greater than or equal to the start date and returns results in a JSON format
 
-        > /api/v1.0/<start>/<end> - given both start and end date, the endpoint calculates the minimum, average, and maximum temperature for dates between the start and end date
+        > /api/v1.0/<start>/<end> - given both start and end date, the endpoint calculates the minimum, average, and maximum temperature for dates between the start and end date and returns reults in JSON format
 
 #### Temperature Analysis
 
-    > A function called `calc_temps` is created and will accept a start date and end date. The function will return the minimum, average, and maximum temperatures for that range of dates.
+    > A function called `calc_temps` is created and will accept a start date and end date. The function will return the minimum, average, and maximum temperatures for the range of dates entered by the user. The dates should be entered in "YYYY-MM-DD" format.
 
     > Use this function to calculate the min, avg, and max temperatures for your trip using the matching dates from the previous year (i.e., use "2017-01-01" if your trip start date was "2018-01-01").
 

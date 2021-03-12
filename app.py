@@ -134,9 +134,13 @@ def temp_monthly():
 
 
 # Set the app.route() decorator for the "/api/v1.0/temp/<start>" route
+# start and end dates should be entered in "YYYY-MM-DD" format
+# i.e (host#)/api/v1.0/temp/2012-02-28 
 @app.route("/api/v1.0/temp/<start>")
 
 # Set the app.route() decorator for the"/api/v1.0/temp/<start>/<end>" route
+# start and end dates should be entered in "YYYY-MM-DD" format
+# i.e. (host#)/api/v1.0/temp/2012-02-28/'2012-03-05'
 @app.route("/api/v1.0/temp/<start>/<end>")
 
 # define a stats() function that takes a start and end argument, and returns jsonified TMIN, TAVG, TMAX data from the database
@@ -145,19 +149,29 @@ def stats(start=None, end=None):
     session = Session(engine)
 
     #calculate min, avg and max if no end date
-    if end == None:
+    if end is None:
         # calculate TMIN, TAVG, TMAX for dates greater than start
         aggregates = func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)
         temp_data = session.query(*aggregates).filter(Measurement.date >= start).all()
 
-    
+        #ANOTHER OPTION with labels
+        # list_temp = []
+        # for tmin, tavg, tmax in temp_data:
+        #         dict_temp = {}
+        #         dict_temp["minimum temperature"] = tmin
+        #         dict_temp["average temperature"] = tavg
+        #         dict_temp["maximum temperature"] = tmax
+        #         list_temp.append(dict_temp)
+        # print(temp_data)
+
+        #OUTPUT DOESNT DISPLAY LABEL
         # Unravel results into a 1D array and convert to a list
         temp_data_list = list(np.ravel(temp_data))
         # Return the jsonify() representation of the list
         return jsonify(temp_data_list)
 
     else:
-        # calculate TMIN, TAVG, TMAX with both start and end
+        # calculate TMIN, TAVG, TMAX with both start and end dates
         aggregates = func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)
         temp_data = session.query(*aggregates).\
                     filter(Measurement.date >= start).\
@@ -166,10 +180,11 @@ def stats(start=None, end=None):
         # Unravel results into a 1D array and convert to a list
         temp_data_list = list(np.ravel(temp_data))
 
+        session.close()
         # Return the jsonify() representation of the list
         return jsonify(temp_data_list)
 
-    session.close()
+    
 
 if __name__ == '__main__':
     app.run()
