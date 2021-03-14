@@ -52,6 +52,7 @@ def welcome():
         f"> Precipitation<br/>"
         f"> List of Stations<br/>"
         f"> Temperature Observations<br/>"
+        f"> Temperature Observation Statistics on specific dates"
     )
 
 # Set the app.route() decorator for the "/api/v1.0/precipitation" route
@@ -83,7 +84,7 @@ def precipitation():
     # Return the jsonify() representation of the dictionary
     return jsonify(prcp_pairs)
     
-    
+  
 # Set the app.route() decorator for the "/api/v1.0/stations" route
 @app.route("/api/v1.0/stations")
 
@@ -99,7 +100,6 @@ def stations():
     session.close()
 
     # Unravel results into a 1D array and convert to a list
-    # Hint: checkout the np.ravel() function to make it easier to convert to a list
     list_stations = list(np.ravel(stations_all))
 
     # Return the jsonify() representation of the list
@@ -125,12 +125,8 @@ def temp_monthly():
 
     session.close()
 
-    # Unravel results into a 1D array and convert to a list
-    # Hint: checkout the np.ravel() function to make it easier to convert to a list
-    temp_list = list(np.ravel(temperature))
-
     # Return the jsonify() representation of the list
-    return jsonify(temp_list)
+    return jsonify(temperature)
 
 
 # Set the app.route() decorator for the "/api/v1.0/temp/<start>" route
@@ -150,41 +146,49 @@ def stats(start=None, end=None):
 
     #calculate min, avg and max if no end date
     if end is None:
-        # calculate TMIN, TAVG, TMAX for dates greater than start
-        aggregates = func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)
+        # calculate temperature stats for dates greater than start
+        aggregates = func.min(Measurement.tobs).label("Min_Temp"),\
+                    func.avg(Measurement.tobs).label("Avg_Temp"),\
+                    func.max(Measurement.tobs).label("Max_Temp")
+                     
         temp_data = session.query(*aggregates).filter(Measurement.date >= start).all()
+       
+        list_temp = []
 
-        #ANOTHER OPTION with labels
-        # list_temp = []
-        # for tmin, tavg, tmax in temp_data:
-        #         dict_temp = {}
-        #         dict_temp["minimum temperature"] = tmin
-        #         dict_temp["average temperature"] = tavg
-        #         dict_temp["maximum temperature"] = tmax
-        #         list_temp.append(dict_temp)
-        # print(temp_data)
+        for data in temp_data:
 
-        #OUTPUT DOESNT DISPLAY LABEL
-        # Unravel results into a 1D array and convert to a list
-        temp_data_list = list(np.ravel(temp_data))
+            dict_temp = {}
+            dict_temp["minimum temperature"] = data.Min_Temp
+            dict_temp["average temperature"] = data.Avg_Temp
+            dict_temp["maximum temperature"] = data.Max_Temp
+            list_temp.append(dict_temp)
+        
         # Return the jsonify() representation of the list
-        return jsonify(temp_data_list)
+        return jsonify(list_temp)
 
     else:
-        # calculate TMIN, TAVG, TMAX with both start and end dates
-        aggregates = func.min(Measurement.tobs), func.max(Measurement.tobs), func.avg(Measurement.tobs)
+        # calculate temperature stats with both start and end dates
+        aggregates = func.min(Measurement.tobs).label("Min_Temp"),\
+                    func.avg(Measurement.tobs).label("Avg_Temp"),\
+                    func.max(Measurement.tobs).label("Max_Temp")
         temp_data = session.query(*aggregates).\
                     filter(Measurement.date >= start).\
                     filter(Measurement.date <= end).all()
 
-        # Unravel results into a 1D array and convert to a list
-        temp_data_list = list(np.ravel(temp_data))
+        list_temp = []
 
+        for data in temp_data:
+
+            dict_temp = {}
+            dict_temp["minimum temperature"] = data.Min_Temp
+            dict_temp["average temperature"] = data.Avg_Temp
+            dict_temp["maximum temperature"] = data.Max_Temp
+            list_temp.append(dict_temp)
+        
         session.close()
         # Return the jsonify() representation of the list
-        return jsonify(temp_data_list)
+        return jsonify(list_temp)
 
     
-
 if __name__ == '__main__':
     app.run()
